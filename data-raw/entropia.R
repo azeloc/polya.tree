@@ -1,31 +1,50 @@
 devtools::load_all()
 
-  N <- 10000
+  N <- 1000
 
   alfa <- 1
   beta <- 3
 
-  NN <- 20
+  # c <- integrate(function(x){dbeta(x, alfa, beta, log = TRUE)^2*dbeta(x, alfa, beta)}, 0, 1)$value-
+  #   integrate(function(x){dbeta(x, alfa, beta, log = TRUE)*dbeta(x, alfa, beta)}, 0, 1)$value^2
+  #
+  # entropy <- integrate(function(x){dbeta(x, alfa, beta, log = TRUE)*dbeta(x, alfa, beta)}, 0, 1)$value
+
+  #amostra_0 <- rnorm(N, 1, 1)
+  #amostra_0 <- rgamma(N, 2, 2)
+
+  #estimacao_gamma <- EnvStats::egamma(amostra_0)
+
+  #amostra <- pnorm(amostra_0, mean(amostra_0), sd(amostra_0))
+  #amostra <- pgamma(amostra_0, estimacao_gamma$parameters[1], scale = estimacao_gamma$parameters[2])
+
+  NN <- 100
 
   estatistica <- numeric(length = NN)
   outra <- numeric(length = NN)
 
-  for(ii in 1:20){
+  for(ii in 1:NN){
 
   #amostra <- (runif(N)+runif(N))/2
   amostra <- rbeta(N, alfa, beta)
 
-  DistributionTest::za.test(pbeta(amostra, alfa, beta), "unif", para = list(min = 0, max = 1))
+  #DistributionTest::za.test(pbeta(amostra, alfa, beta), "unif", para = list(min = 0, max = 1))
 
   rtriangular <- function(N = 1){
     (runif(N)+runif(N))/2
   }
 
-  a_func_adap <- function(l){
-    l*2^(2*l*0.5)
+  a_func_adap <- function(l, delta = 0.01){
+    round(l*2^(2*l*delta))
+    #1
   }
 
-  fitted_tree <- fit_polya_tree(amostra, a_func = a_func_adap, size = 4)
+  ln = 10
+
+  fitted_tree <- fit_polya_tree(
+    amostra,
+    a_func = a_func_adap,
+    size = ln)
 
   samples <- fitted_tree |>
     sample_polya_tree_v2(NN = 1000)
@@ -34,18 +53,18 @@ devtools::load_all()
   f_chapeu_direct <- evaluate_f_hat_direct(fitted_tree)
 
   ce <- samples |>
-    evaluate_cross_entropy() |>
+    evaluate_cross_entropy_non_discrete() |>
     dplyr::pull(cross_entropy)
 
   f_0 <- mean(f_chapeu_direct$estimativa_media*
                 dbeta(f_chapeu_direct$x, alfa, beta, log = TRUE))
 
-  f_01 <- 4*log(2)+mean(f_chapeu$estimativa_media*log(
-                (qbeta(f_chapeu$x+1/2^5, alfa, beta)-
-                qbeta(f_chapeu$x-1/2^5, alfa, beta))*16
+  f_01 <- mean(f_chapeu$estimativa_media*log(
+                (pbeta(f_chapeu$x+1/2^(ln+1), alfa, beta)-
+                pbeta(f_chapeu$x-1/2^(ln+1), alfa, beta))
                 ))
 
-  eval <- mean(ce >= f_0)
+  eval <- mean(ce >= f_01)
 
   print(eval)
 
@@ -99,3 +118,5 @@ hist(estatistica)
 #       entropia,
 #       0,
 #       2*sqrt(c/N))), col = 'red')
+
+hist(estatistica)

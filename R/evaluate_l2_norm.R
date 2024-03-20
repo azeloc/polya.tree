@@ -40,6 +40,26 @@ evaluate_sup_norm <- function(sampled_polya_tree){
     )
 }
 
+evaluate_cross_entropy_non_discrete <- function(sampled_polya_tree){
+  sampled_polya_tree |>
+    dplyr::select(x, altura, estimativa) |>
+    tidyr::unnest(estimativa) |>
+    dplyr::group_by(x) |>
+    dplyr::mutate(
+      amostra = 1:dplyr::n()
+    ) |>
+    dplyr::group_by(x) |>
+    dplyr::mutate(
+      estimativa_media = mean(estimativa)
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::group_by(amostra) |>
+    dplyr::summarise(
+      cross_entropy = mean(estimativa_media*log(estimativa/2^(max(altura))))
+    )
+}
+
+
 evaluate_cross_entropy <- function(sampled_polya_tree){
   sampled_polya_tree |>
     dplyr::select(x, altura, estimativa) |>
