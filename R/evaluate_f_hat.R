@@ -20,78 +20,59 @@ evaluate_f_hat_direct <- function(polya_tree){
   quebras <- cumsum(c(rep(2^(-(altura)), 2^altura)))-1/(2^(altura+1))
 
   possibilidades <- sapply(X = quebras, FUN = function(.x){
-    as.numeric(intToBits(which.min(.x > quebras)-1))[(altura):1]
-  }) |>
-    apply(2, paste0, simplify = FALSE, collapse = "")  |>
-    purrr::map(purrr::accumulate, paste0) |>
-    unlist()
+    expansao <- as.numeric(intToBits(which.min(.x > quebras)-1))[altura:1]
+    expansao
+  })
 
-  localizacoes <- possibilidades |>
-    purrr::map(
-      function(.x){
-        print(.x)
+  tamanho <- ncol(possibilidades)
 
-        matches <- stringr::str_detect(.x, paste0("^", polya_tree$theta))
+  posicoes <- matrix(nrow = altura, ncol = tamanho)
 
-        matches[matches] <- as.character(stringr::str_split(.x, "", simplify = TRUE))
+  posicoes[1,] <- 1
 
-        as.numeric(matches)
-      }
+  for(jj in 2:altura){
+
+    posicoes[jj,] <- (
+      2^(jj-1) +
+        apply(
+          matrix(possibilidades[1:(jj-1),], nrow = jj-1, ncol = tamanho, byrow = FALSE),
+          2,
+          function(x){
+            sum(x*(2^((jj-2):0)))
+          })
     )
+  }
 
-  sorteio <- polya_tree |>
-    dplyr::mutate(
-      thetas_amostra = purrr::map2(n_esquerda, n_direita, ~rbeta(NN, .x, .y))
-    )
+  lista_posicoes <- as.list(as.data.frame(posicoes))
+
+  sorteio <- polya_tree
 
   pontos <- tibble::tibble(
-    posicao = possibilidades,
+    #posicao = possibilidades,
     x = quebras,
-    caminho = localizacoes,
+    caminho = lista_posicoes,
     altura = altura,
     id = seq_along(quebras)
   )
 
-  suppressMessages(
-    A <- dplyr::bind_cols(pontos$caminho, .name_repair = "unique")  |> t())
+  C <- numeric(length = nrow(pontos))
 
-  suppressMessages(
-    B <- sorteio$thetas_amostra |> dplyr::bind_cols(.name_repair = "unique") |> as.matrix() |> t()
-  )
-  lados <- length(which(!is.na(A[1,])))
+  for(ii in 1:nrow(pontos)){
+      thetas <- sorteio$n_esquerda[posicoes[,ii]]/
+        (sorteio$n_esquerda[posicoes[,ii]]+
+         sorteio$n_direita[posicoes[,ii]])
 
-  C <- list()
-  for(ii in 1:nrow(A)){
-    C[ii] <- list(
-      apply(
-        rbind(
-          B[which(A[ii,] == 0), ],
-          1-B[which(A[ii,] == 1), ]),
-        2,
-        prod)*(2^lados)
-    )
+      direita <- possibilidades[,ii]
+
+      peso <- thetas^(1-direita)-(direita)*thetas
+
+      C[ii] <- prod(peso*2)
   }
 
   aux <- pontos
 
   aux$estimativa <- C
 
-  aux
-
-  sampled_polya_tree |>
-    dplyr::select(theta = posicao, altura, estimativa) |>
-    tidyr::unnest(estimativa) |>
-    dplyr::group_by(theta) |>
-    dplyr::mutate(
-      amostra = 1:dplyr::n()
-    ) |>
-    dplyr::group_by(amostra) |>
-    dplyr::mutate(
-      x = (1:dplyr::n())*(2^(-max(altura)))-1/2^(max(altura)+1)
-    ) |>
-    dplyr::group_by(x) |>
-    dplyr::mutate(
-      estimativa_media = mean(estimativa)
-    ) |>
-    dplyr::distinct(x, estimativa_media)
+  aux |>
+    dplyr::distinct(x, estimativa_media = estimativa)
 }

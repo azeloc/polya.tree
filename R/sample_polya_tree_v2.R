@@ -30,10 +30,7 @@ sample_polya_tree_v2 <- function(polya_tree, NN = 1){
 
   lista_posicoes <- as.list(as.data.frame(posicoes))
 
-  sorteio <- polya_tree |>
-    dplyr::mutate(
-      thetas_amostra = purrr::map2(n_esquerda, n_direita, ~rbeta(NN, .x, .y))
-    )
+  sorteio <- polya_tree
 
   pontos <- tibble::tibble(
     #posicao = possibilidades,
