@@ -5,20 +5,6 @@ devtools::load_all()
   alfa <- 1
   beta <- 3
 
-
-  # c <- integrate(function(x){dbeta(x, alfa, beta, log = TRUE)^2*dbeta(x, alfa, beta)}, 0, 1)$value-
-  #   integrate(function(x){dbeta(x, alfa, beta, log = TRUE)*dbeta(x, alfa, beta)}, 0, 1)$value^2
-  #
-  # entropy <- integrate(function(x){dbeta(x, alfa, beta, log = TRUE)*dbeta(x, alfa, beta)}, 0, 1)$value
-
-  #amostra_0 <- rnorm(N, 1, 1)
-  #amostra_0 <- rgamma(N, 2, 2)
-
-  #estimacao_gamma <- EnvStats::egamma(amostra_0)
-
-  #amostra <- pnorm(amostra_0, mean(amostra_0), sd(amostra_0))
-  #amostra <- pgamma(amostra_0, estimacao_gamma$parameters[1], scale = estimacao_gamma$parameters[2])
-
   NN <- 20
 
   estatistica <- numeric(length = NN)
@@ -45,13 +31,14 @@ devtools::load_all()
     sample_polya_tree_v2(NN = 1000)
 
   f_chapeu <- evaluate_f_hat(samples)
+  f_chapeu_direct <- evaluate_f_hat_direct(fitted_tree)
 
   ce <- samples |>
     evaluate_cross_entropy() |>
     dplyr::pull(cross_entropy)
 
-  f_0 <- mean(f_chapeu$estimativa_media*
-                dbeta(f_chapeu$x, alfa, beta, log = TRUE))
+  f_0 <- mean(f_chapeu_direct$estimativa_media*
+                dbeta(f_chapeu_direct$x, alfa, beta, log = TRUE))
 
   f_01 <- 4*log(2)+mean(f_chapeu$estimativa_media*log(
                 (qbeta(f_chapeu$x+1/2^5, alfa, beta)-
